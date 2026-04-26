@@ -3,113 +3,97 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-// পাথ আপডেট করা হয়েছে যেহেতু ফাইলটি lib ফোল্ডারের সরাসরি ভেতরে
-import '../create_post_screen.dart'; 
+import '../create_post_screen.dart'; // পাথ ঠিক রেখো
 
 class CreatePostBox extends StatefulWidget {
-  const CreatePostBox({super.key});
-  @override State<CreatePostBox> createState() => _CreatePostBoxState();
+  final VoidCallback? onPostCreated;
+  const CreatePostBox({super.key, this.onPostCreated});
+
+  @override
+  State<CreatePostBox> createState() => _CreatePostBoxState();
 }
 
 class _CreatePostBoxState extends State<CreatePostBox> {
-  String _firstName = "Loading...";
-  String _profilePicUrl = ""; 
+  String _profilePicUrl = '';
 
   @override
   void initState() {
     super.initState();
-    _fetchUserData();
+    _fetchUserData(); 
   }
 
   Future<void> _fetchUserData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? mobileNumber = prefs.getString('mobileNumber'); 
-    if (mobileNumber != null) {
+    String? mobile = prefs.getString('mobileNumber');
+    if (mobile != null) {
       try {
-        final response = await http.get(Uri.parse('https://app.kothabook.com/api/user/$mobileNumber'));
+        final response = await http.get(Uri.parse('https://app.kothabook.com/api/user/$mobile'));
         if (response.statusCode == 200) {
-          final userData = jsonDecode(response.body);
-          if (mounted) {
-            setState(() { 
-              _firstName = userData['firstName'] ?? "User"; 
-              _profilePicUrl = userData['profilePic'] ?? ""; 
-            });
-          }
+          final data = jsonDecode(response.body);
+          if (mounted) setState(() { _profilePicUrl = data['profilePic'] ?? ''; });
         }
-      } catch (error) { 
-        print(error); 
+      } catch (e) {
+        print(e);
       }
     }
   }
 
-  void _goToCreatePost(bool autoOpenGallery) {
-    Navigator.push(
-      context, 
-      MaterialPageRoute(builder: (context) => CreatePostScreen(autoOpenGallery: autoOpenGallery))
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _goToCreatePost(false), 
-      child: Container(
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // 🚀 আগের মত মার্জিন
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
         color: Colors.white, 
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 20, 
-                  backgroundColor: const Color(0xFFE0E0E0), 
-                  backgroundImage: _profilePicUrl.isNotEmpty ? NetworkImage(_profilePicUrl) : null, 
-                  child: _profilePicUrl.isEmpty ? const Icon(Icons.person, color: Colors.white) : null
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), 
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF4F6F9), 
-                      borderRadius: BorderRadius.circular(24)
-                    ), 
-                    child: Text(
-                      "What's on your mind, $_firstName?", 
-                      style: GoogleFonts.poppins(color: const Color(0xFFA0A0A0), fontSize: 14)
-                    )
-                  )
-                ),
-              ],
-            ),
-            const SizedBox(height: 12), 
-            const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)), 
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildActionItem(Icons.video_call_rounded, Colors.redAccent, 'Live', false),
-                Container(width: 1, height: 24, color: const Color(0xFFF0F0F0)),
-                _buildActionItem(Icons.photo_library_rounded, Colors.green, 'Photo', true),
-                Container(width: 1, height: 24, color: const Color(0xFFF0F0F0)),
-                _buildActionItem(Icons.video_camera_back_rounded, Colors.purpleAccent, 'Room', false),
-              ],
-            )
-          ],
-        ),
+        borderRadius: BorderRadius.circular(20), 
+        border: Border.all(color: Colors.grey.shade200)
       ),
-    );
-  }
-
-  Widget _buildActionItem(IconData icon, Color color, String label, bool isGallery) {
-    return GestureDetector(
-      onTap: () => _goToCreatePost(isGallery),
       child: Row(
         children: [
-          Icon(icon, color: color, size: 20), 
-          const SizedBox(width: 6), 
-          Text(label, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF6B6B6B)))
-        ]
+          CircleAvatar(
+            radius: 20, 
+            backgroundColor: const Color(0xFFE0E0E0),
+            backgroundImage: _profilePicUrl.isNotEmpty ? NetworkImage(_profilePicUrl) : const NetworkImage('https://i.pravatar.cc/150?img=11') as ImageProvider,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CreatePostScreen(autoOpenGallery: false)),
+                ).then((value) {
+                  if (value == true && widget.onPostCreated != null) widget.onPostCreated!();
+                });
+              },
+              child: Container(
+                color: Colors.transparent, 
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('What is on your mind?', style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B6B6B), fontWeight: FontWeight.w500)),
+                    Text('@Mention.. Link..', style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFFA0A0A0))),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const CreatePostScreen(autoOpenGallery: true)),
+              ).then((value) {
+                  if (value == true && widget.onPostCreated != null) widget.onPostCreated!();
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: const Color(0xFFFFF3E0), borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.image_outlined, color: Color(0xFFFF6D00), size: 22),
+            ),
+          ),
+        ],
       ),
     );
   }
