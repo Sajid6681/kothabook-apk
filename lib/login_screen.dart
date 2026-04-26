@@ -57,10 +57,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse("$baseUrl/api/auth/login"),
+        // 🚀 ১. API লিংক ঠিক করা হয়েছে
+        Uri.parse("$baseUrl/api/login"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "mobile": _mobileController.text,
+          // 🚀 ২. mobile এর জায়গায় mobileNumber দেওয়া হয়েছে
+          "mobileNumber": _mobileController.text.trim(),
           "password": _passwordController.text,
         }),
       );
@@ -69,8 +71,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (response.statusCode == 200) {
         SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', data['token']);
-        await prefs.setString('userId', data['user']['id']);
+        // 🚀 ৩. হোম পেজের জন্য mobileNumber সেভ করা হয়েছে
+        await prefs.setString('mobileNumber', _mobileController.text.trim());
+        if (data['user'] != null && data['user']['_id'] != null) {
+           await prefs.setString('userId', data['user']['_id']);
+        }
 
         if (mounted) {
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomeScreen()));

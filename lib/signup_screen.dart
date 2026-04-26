@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'login_screen.dart';
-// import 'complete_profile_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -74,15 +73,19 @@ class _SignupScreenState extends State<SignupScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse("$baseUrl/api/auth/signup"),
+        // 🚀 ১. API লিংক ঠিক করা হয়েছে
+        Uri.parse("$baseUrl/api/register"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "firstName": _firstNameController.text,
-          "lastName": _lastNameController.text,
-          "mobile": _mobileController.text,
+          "firstName": _firstNameController.text.trim(),
+          "lastName": _lastNameController.text.trim(),
+          // 🚀 ২. mobile এর জায়গায় mobileNumber দেওয়া হয়েছে
+          "mobileNumber": _mobileController.text.trim(),
           "password": _passwordController.text,
           "gender": _selectedGender ?? "Not Specified",
-          "birthday": _selectedBirthday?.toIso8601String() ?? "",
+          "birthday": _selectedBirthday != null 
+              ? "${_selectedBirthday!.day.toString().padLeft(2, '0')} / ${_selectedBirthday!.month.toString().padLeft(2, '0')} / ${_selectedBirthday!.year}" 
+              : "",
         }),
       );
 
@@ -99,7 +102,7 @@ class _SignupScreenState extends State<SignupScreen> {
         _showError(data['message'] ?? "সাইনআপ ব্যর্থ হয়েছে!");
       }
     } catch (e) {
-      _showError("সার্ভার কানেকশন ফেইলড! (kothabook.com)");
+      _showError("সার্ভার কানেকশন ফেইলড!");
     } finally {
       if (mounted) { setState(() { _isLoading = false; }); }
     }
