@@ -20,8 +20,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _mobileController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  // 🌐 Your live domain
-  final String baseUrl = "https://kothabook.com"; 
+  // 🌐 ঠিক করা লাইভ ডোমেইন (app. যুক্ত করা হয়েছে)
+  final String baseUrl = "https://app.kothabook.com"; 
 
   @override
   void dispose() {
@@ -47,53 +47,70 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // ==========================================
-  // 🚀 Login API connection and session save function
+  // 🚀 Login API কানেকশন ফাংশন
   // ==========================================
   Future<void> _loginAndGoToHome() async {
     if (_mobileController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Please fill in all fields!", style: GoogleFonts.poppins())),
+        SnackBar(content: Text('Please enter mobile number and password', style: GoogleFonts.poppins()), backgroundColor: Colors.red)
       );
       return;
     }
 
-    setState(() { _isLoading = true; });
+    setState(() {
+      _isLoading = true;
+    });
+
+    final String apiUrl = '$baseUrl/api/login';
 
     try {
       final response = await http.post(
-        Uri.parse("$baseUrl/api/auth/login"),
+        Uri.parse(apiUrl),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "mobile": _mobileController.text,
+          "mobileNumber": _mobileController.text.trim(),
           "password": _passwordController.text,
         }),
       );
 
-      final data = jsonDecode(response.body);
+      final responseData = jsonDecode(response.body);
+
+      setState(() {
+        _isLoading = false;
+      });
 
       if (response.statusCode == 200) {
+        // 🚀 সফল লগইনের পর ডাটাবেস থেকে পাওয়া নাম্বার সেভ করা হচ্ছে
         SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', data['token']);
-        await prefs.setString('userId', data['user']['id']);
+        await prefs.setString('mobileNumber', _mobileController.text.trim());
 
-        if (mounted) {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomeScreen()));
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(data['message'] ?? "Login failed!", style: GoogleFonts.poppins()))
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Server connection failed! (kothabook.com)", style: GoogleFonts.poppins()))
+          SnackBar(content: Text(responseData['message'], style: GoogleFonts.poppins()), backgroundColor: Colors.green)
+        );
+
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => const HomeScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 400),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(responseData['message'] ?? 'Login failed!', style: GoogleFonts.poppins()), backgroundColor: Colors.red)
         );
       }
-    } finally {
-      if (mounted) { setState(() { _isLoading = false; }); }
+    } catch (error) {
+      setState(() {
+        _isLoading = false;
+      });
+      print("Login Error: $error");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Server connection failed!', style: GoogleFonts.poppins()), backgroundColor: Colors.red)
+      );
     }
   }
 
@@ -101,124 +118,103 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        child: Container(
-          height: MediaQuery.of(context).size.height,
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 40),
-              Center(
-                child: Container(
-                  height: 100,
-                  width: 100,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFF6D00).withOpacity(0.1),
-                    shape: BoxShape.circle,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 40.0),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top - 80,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 20),
+                Container(
+                  width: 64, height: 64,
+                  decoration: BoxDecoration(color: const Color(0xFFFFF3E0), borderRadius: BorderRadius.circular(16)),
+                  child: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFFFF6D00), size: 32),
+                ),
+                const SizedBox(height: 24),
+                Text('Welcome Back', style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF1A1A1A), letterSpacing: -0.5)),
+                const SizedBox(height: 8),
+                Text('Sign in to continue to KothaBook', style: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFF6B6B6B))),
+                const SizedBox(height: 48),
+
+                _buildLabel('Mobile Number'),
+                _buildTextField(
+                  controller: _mobileController,
+                  hint: 'Ex: 01XXXXXXXXX',
+                  icon: Icons.phone_android_rounded,
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 20),
+                
+                _buildLabel('Password'),
+                _buildTextField(
+                  controller: _passwordController,
+                  hint: 'Enter your password',
+                  icon: Icons.lock_outline_rounded,
+                  isPassword: true,
+                  obscure: _obscurePassword,
+                  onToggle: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
+                  }
+                ),
+                
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {},
+                    style: TextButton.styleFrom(padding: const EdgeInsets.only(top: 8, bottom: 8, right: 0), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                    child: Text('Forgot Password?', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: const Color(0xFFFF6D00))),
                   ),
-                  child: const Icon(Icons.menu_book_rounded, size: 50, color: Color(0xFFFF6D00)),
                 ),
-              ),
-              const SizedBox(height: 24),
-              Center(
-                child: Text(
-                  "KothaBook",
-                  style: GoogleFonts.poppins(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFFFF6D00),
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ),
-              Center(
-                child: Text(
-                  "Login to continue your journey",
-                  style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600]),
-                ),
-              ),
-              const SizedBox(height: 48),
-              
-              Padding(
-                padding: const EdgeInsets.only(left: 4, bottom: 6),
-                child: Text('Mobile Number', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: const Color(0xFF1A1A1A))),
-              ),
-              _buildTextField(
-                controller: _mobileController,
-                hint: "Enter Mobile Number",
-                icon: Icons.phone_android_outlined,
-                keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(height: 20),
-              
-              Padding(
-                padding: const EdgeInsets.only(left: 4, bottom: 6),
-                child: Text('Password', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: const Color(0xFF1A1A1A))),
-              ),
-              _buildTextField(
-                controller: _passwordController,
-                hint: "Enter Password",
-                icon: Icons.lock_outline,
-                isPassword: true,
-                obscure: _obscurePassword,
-                onToggle: () => setState(() => _obscurePassword = !_obscurePassword)
-              ),
-              
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {},
-                  child: Text("Forgot Password?", style: GoogleFonts.poppins(color: const Color(0xFFFF6D00), fontSize: 13, fontWeight: FontWeight.w600)),
-                ),
-              ),
-              
-              const SizedBox(height: 20),
-              
-              SizedBox(
-                width: double.infinity,
-                height: 55,
-                child: ElevatedButton(
+
+                const Spacer(),
+
+                ElevatedButton(
                   onPressed: _isLoading ? null : _loginAndGoToHome,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF6D00),
-                    elevation: 4,
-                    shadowColor: const Color(0xFFFF6D00).withOpacity(0.4),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+                    backgroundColor: const Color(0xFFFF6D00), foregroundColor: Colors.white,
+                    disabledBackgroundColor: const Color(0xFFFFB782),
+                    minimumSize: const Size(double.infinity, 56), elevation: 4,
+                    shadowColor: const Color(0xFFFF6D00).withOpacity(0.3),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                   child: _isLoading 
-                    ? const CircularProgressIndicator(color: Colors.white) 
-                    : Text("Login", style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                    ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                    : Text('Log In', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
-              ),
-              
-              const SizedBox(height: 24),
-              
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text("Don't have an account? ", style: GoogleFonts.poppins(color: Colors.grey[600], fontSize: 14)),
-                  GestureDetector(
-                    onTap: _goToSignup,
-                    child: Text(
-                      "Sign Up",
-                      style: GoogleFonts.poppins(color: const Color(0xFFFF6D00), fontWeight: FontWeight.bold, fontSize: 14),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('Don\'t have an account? ', style: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFF6B6B6B))),
+                    GestureDetector(
+                      onTap: _goToSignup,
+                      child: Text('Sign Up', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFFFF6D00))),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  // 🏗️ Your original style TextField Builder
+  Widget _buildLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(text, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: const Color(0xFF1A1A1A))),
+      ),
+    );
+  }
+
+  // 🏗️ তোমার অরিজিনাল স্টাইলের TextField Builder
   Widget _buildTextField({
     required TextEditingController controller, 
     required String hint, 
