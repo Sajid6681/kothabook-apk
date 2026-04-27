@@ -9,8 +9,6 @@ import 'widgets/bottom_nav_bar.dart';
 import 'widgets/left_sidebar.dart';
 import 'widgets/story_section.dart';
 import 'widgets/post_card.dart';
-import 'widgets/custom_dialog.dart'; 
-import 'profile_screen.dart';
 import 'widgets/create_post_box.dart'; 
 
 class HomeScreen extends StatefulWidget {
@@ -25,13 +23,19 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _showGreeting = true;
 
   String _fullName = "Loading...";
-  String _profilePicUrl = ""; 
+  String _currentUserId = ""; 
   bool _isLoadingUserData = true;
+  
+  List<dynamic> _allPosts = []; 
+  bool _isLoadingPosts = true;
+
+  final String _baseUrl = "https://app.kothabook.com/api";
 
   @override
   void initState() {
     super.initState();
     _fetchUserData();
+    _fetchPosts(); 
   }
 
   Future<void> _fetchUserData() async {
@@ -45,156 +49,189 @@ class _HomeScreenState extends State<HomeScreen> {
         final response = await http.get(Uri.parse(apiUrl));
 
         if (response.statusCode == 200) {
-          final userData = jsonDecode(response.body);
-          
+          final data = json.decode(response.body);
           if (mounted) {
             setState(() {
-              // 🚀 Full Name শো করানোর লজিক
-              _fullName = "${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}".trim();
-              if (_fullName.isEmpty) _fullName = "User";
-              
-              _profilePicUrl = userData['profilePic'] ?? ""; 
+              _fullName = "${data['firstName']} ${data['lastName']}";
+              _currentUserId = data['_id']?.toString() ?? mobileNumber; 
               _isLoadingUserData = false;
             });
           }
+        } else {
+           if (mounted) setState(() => _isLoadingUserData = false);
         }
       } catch (error) {
+        debugPrint("Error fetching user data: $error");
         if (mounted) setState(() => _isLoadingUserData = false);
       }
+    } else {
+      if (mounted) setState(() => _isLoadingUserData = false);
+    }
+  }
+
+  Future<void> _fetchPosts() async {
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/posts'));
+      if (response.statusCode == 200) {
+        if (mounted) {
+          setState(() {
+            _allPosts = jsonDecode(response.body);
+            _isLoadingPosts = false;
+          });
+        }
+      } else {
+         if (mounted) setState(() => _isLoadingPosts = false);
+      }
+    } catch (e) {
+      debugPrint("Error fetching posts: $e");
+      if (mounted) setState(() => _isLoadingPosts = false);
     }
   }
 
   void _toggleLeftSidebar() {
-    setState(() => _isLeftSidebarOpen = !_isLeftSidebarOpen);
-  }
-
-  void _hideGreeting() {
-    CustomDialog.show(
-      context: context,
-      title: 'Hide Greeting?',
-      message: 'Do you want to dismiss this greeting message?',
-      confirmText: 'Hide',
-      isDestructive: false, 
-      onConfirm: () => setState(() => _showGreeting = false),
-    );
-  }
-
-  void _goToProfile() {
-    Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen(isOwnProfile: true)));
+    setState(() {
+      _isLeftSidebarOpen = !_isLeftSidebarOpen;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
+    Size size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F9),
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              TopNavBar(onMenuTap: _toggleLeftSidebar),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.only(bottom: 100, top: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const StorySection(),
-                      
-                      // 🚀 Create Post Box (Profile screen এর মতো)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 0),
-                        child: CreatePostBox(), 
-                      ),
-                      const SizedBox(height: 12),
-
-                      if (_showGreeting)
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey.shade200)),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(20),
-                            child: Stack(
-                              children: [
-                                Positioned(left: 0, top: 0, bottom: 0, child: Container(width: 6, decoration: const BoxDecoration(gradient: LinearGradient(colors: [Colors.amber, Color(0xFFFF6D00)], begin: Alignment.topCenter, end: Alignment.bottomCenter)))),
-                                Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Row(
-                                    children: [
-                                      const SizedBox(width: 8),
-                                      const Icon(Icons.nights_stay_rounded, color: Colors.indigoAccent, size: 36),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text('Good Evening, $_fullName', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF1A1A1A))),
-                                            const SizedBox(height: 2),
-                                            Text('We hope you are enjoying your evening.', style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B6B6B))),
-                                          ],
-                                        ),
-                                      ),
-                                      IconButton(icon: const Icon(Icons.close_rounded, color: Color(0xFFA0A0A0), size: 20), onPressed: _hideGreeting), 
-                                    ],
-                                  ),
+      backgroundColor: const Color(0xFFF0F2F5),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Column(
+              children: [
+                TopNavBar(onMenuTap: _toggleLeftSidebar),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      await _fetchUserData();
+                      await _fetchPosts();
+                    },
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        children: [
+                          if (_showGreeting)
+                            AnimatedOpacity(
+                              duration: const Duration(milliseconds: 500),
+                              opacity: _showGreeting ? 1.0 : 0.0,
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+                                margin: const EdgeInsets.only(bottom: 5),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.grey.withValues(alpha: 0.05),
+                                      spreadRadius: 1,
+                                      blurRadius: 2,
+                                      offset: const Offset(0, 1),
+                                    )
+                                  ],
                                 ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Recent Updates', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey.shade300)),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.menu_rounded, size: 14),
-                                  const SizedBox(width: 4),
-                                  Text('All', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.bold)),
-                                ],
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Text("👋", style: TextStyle(fontSize: 20)),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          _isLoadingUserData ? "Loading..." : "Hello, ${_fullName.split(' ')[0]}!", 
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.close, size: 20, color: Colors.grey),
+                                      onPressed: () {
+                                        setState(() {
+                                          _showGreeting = false;
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                          ],
-                        ),
-                      ),
+                          const StorySection(),
+                          const SizedBox(height: 8),
+                          
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 0),
+                            child: CreatePostBox(),
+                          ),
+                          const SizedBox(height: 8),
 
-                      // Posts
-                      const PostWidget(
-                        isOwnPost: false, authorName: 'Alex Johnson', avatarImg: 'https://i.pravatar.cc/150?img=33', time: '2 hours ago',
-                        content: 'Just experienced the most beautiful sunset today. KothaBook is awesome! ✨ #Nature #Vibes',
-                        postImg: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&q=80',
+                          _isLoadingPosts 
+                            ? const Padding(
+                                padding: EdgeInsets.all(20.0),
+                                child: CircularProgressIndicator(color: Color(0xFFFF6D00)),
+                              )
+                            : _allPosts.isEmpty 
+                              ? Padding(
+                                  padding: const EdgeInsets.all(20.0),
+                                  child: Text("No posts found", style: GoogleFonts.poppins(color: Colors.grey)),
+                                )
+                              : ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: _allPosts.length,
+                                  itemBuilder: (context, index) {
+                                    var post = _allPosts[index];
+
+                                    return PostCard(
+                                      postId: post['_id']?.toString() ?? "",
+                                      currentUserId: _currentUserId,
+                                      authorId: post['authorId']?.toString() ?? "",
+                                      authorName: post['authorName']?.toString() ?? "Unknown",
+                                      userGender: post['authorGender']?.toString() ?? "male", 
+                                      authorProfilePic: post['authorProfilePic']?.toString(),
+                                      timeAgo: "Just now", 
+                                      textContent: post['textContent']?.toString() ?? "",
+                                      postImageUrl: post['postImageUrl']?.toString() ?? "",
+                                      likes: post['likes'] is List ? post['likes'] : [],
+                                      comments: post['comments'] is List ? post['comments'] : [],
+                                      views: post['views'] is int ? post['views'] : 0,
+                                    );
+                                  },
+                                ),
+                        ],
                       ),
-                      const SizedBox(height: 12),
-                      PostWidget(
-                        isOwnPost: true, 
-                        authorName: _fullName, // 🚀 Full Name Here
-                        avatarImg: _profilePicUrl.isNotEmpty ? _profilePicUrl : 'https://i.pravatar.cc/150?img=11', time: 'Just now',
-                        content: 'Working on some huge updates for KothaBook! Get ready guys! 🚀🔥', postImg: null,
-                      ),
-                    ],
+                    ),
                   ),
                 ),
+              ],
+            ),
+
+            if (_isLeftSidebarOpen) 
+              GestureDetector(
+                onTap: _toggleLeftSidebar,
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.5),
+                  width: size.width,
+                  height: size.height,
+                ),
               ),
-            ],
-          ),
+            
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 300), curve: Curves.easeInOutCubic, top: 0, bottom: 0, left: _isLeftSidebarOpen ? 0 : -320,
+              child: LeftSidebar(onClose: _toggleLeftSidebar),
+            ),
 
-          if (_isLeftSidebarOpen) 
-            GestureDetector(onTap: _toggleLeftSidebar, child: Container(color: Colors.black.withOpacity(0.5), width: size.width, height: size.height)),
-          
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300), curve: Curves.easeInOutCubic, top: 0, bottom: 0, left: _isLeftSidebarOpen ? 0 : -320,
-            child: LeftSidebar(onClose: _toggleLeftSidebar),
-          ),
-
-          Positioned(bottom: 20, left: 16, right: 16, child: BottomNavBar(onProfileTap: _goToProfile)),
-        ],
+            Positioned(bottom: 20, left: 20, right: 20, child: BottomNavBar(onProfileTap: () {})),
+          ],
+        ),
       ),
     );
   }

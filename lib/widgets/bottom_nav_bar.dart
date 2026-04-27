@@ -1,17 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class BottomNavBar extends StatelessWidget {
-  final VoidCallback onProfileTap;
+import '../profile_screen.dart';
 
-  const BottomNavBar({super.key, required this.onProfileTap});
+class BottomNavBar extends StatefulWidget {
+  final VoidCallback? onProfileTap; // এখন optional — নিজেই navigate করবে
+
+  const BottomNavBar({super.key, this.onProfileTap});
+
+  @override
+  State<BottomNavBar> createState() => _BottomNavBarState();
+}
+
+class _BottomNavBarState extends State<BottomNavBar> {
+  String _profilePic = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfilePic();
+  }
+
+  Future<void> _loadProfilePic() async {
+    final prefs = await SharedPreferences.getInstance();
+    final pic = prefs.getString('profilePic') ?? '';
+    if (mounted) setState(() => _profilePic = pic);
+  }
+
+  void _goToOwnProfile() {
+    // widget.onProfileTap callback থাকলে সেটাও চালাও (backward compat)
+    widget.onProfileTap?.call();
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen(isOwnProfile: true)));
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       height: 64,
       decoration: BoxDecoration(
-        color: Colors.white, 
+        color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 30, offset: const Offset(0, 8))]
       ),
@@ -20,42 +48,44 @@ class BottomNavBar extends StatelessWidget {
         children: [
           _buildNavItem(Icons.home_rounded, 'Home', isActive: true),
           _buildNavItem(Icons.slow_motion_video_rounded, 'Reels'),
-          
-          // Center Action Button (Add Post/Upload)
+
+          // Center Add button
           Transform.translate(
             offset: const Offset(0, -20),
             child: Container(
-              width: 56, height: 56, 
+              width: 56, height: 56,
               decoration: BoxDecoration(
-                color: const Color(0xFFFF6D00), 
-                shape: BoxShape.circle, 
-                border: Border.all(color: Colors.white, width: 4), 
+                color: const Color(0xFFFF6D00),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 4),
                 boxShadow: [BoxShadow(color: const Color(0xFFFF6D00).withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 8))]
-              ), 
-              child: const Icon(Icons.add_rounded, color: Colors.white, size: 32)
-            )
+              ),
+              child: const Icon(Icons.add_rounded, color: Colors.white, size: 32),
+            ),
           ),
-          
+
           _buildMessageItem('Message'),
-          
-          // Profile Button (Instead of Menu)
+
+          // ✅ Profile — নিজের profile এ navigate করে
           GestureDetector(
-            onTap: onProfileTap,
+            onTap: _goToOwnProfile,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 24, height: 24, 
-                  margin: const EdgeInsets.only(bottom: 4), 
+                  width: 24, height: 24,
+                  margin: const EdgeInsets.only(bottom: 4),
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle, 
-                    border: Border.all(color: Colors.grey.shade300, width: 2), 
-                    image: const DecorationImage(image: NetworkImage('https://i.pravatar.cc/150?img=11'), fit: BoxFit.cover)
-                  )
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFFF6D00), width: 2),
+                    image: _profilePic.isNotEmpty
+                        ? DecorationImage(image: NetworkImage(_profilePic), fit: BoxFit.cover)
+                        : const DecorationImage(image: NetworkImage('https://kothabook.com/kothabook_api/uploads/default_profile/blank_profile_male.png'), fit: BoxFit.cover),
+                  ),
                 ),
-                Text('Profile', style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFFA0A0A0), fontWeight: FontWeight.w500))
-              ]
-            )
+                Text('Profile', style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFFA0A0A0), fontWeight: FontWeight.w500)),
+              ],
+            ),
           ),
         ],
       ),
@@ -64,36 +94,33 @@ class BottomNavBar extends StatelessWidget {
 
   Widget _buildNavItem(IconData icon, String label, {bool isActive = false}) {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center, 
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(icon, color: isActive ? const Color(0xFFFF6D00) : const Color(0xFFA0A0A0), size: 26), 
-        const SizedBox(height: 2), 
-        Text(label, style: GoogleFonts.poppins(fontSize: 10, color: isActive ? const Color(0xFFFF6D00) : const Color(0xFFA0A0A0), fontWeight: isActive ? FontWeight.bold : FontWeight.w500))
-      ]
+        Icon(icon, color: isActive ? const Color(0xFFFF6D00) : const Color(0xFFA0A0A0), size: 26),
+        const SizedBox(height: 2),
+        Text(label, style: GoogleFonts.poppins(fontSize: 10, color: isActive ? const Color(0xFFFF6D00) : const Color(0xFFA0A0A0), fontWeight: isActive ? FontWeight.bold : FontWeight.w500)),
+      ],
     );
   }
 
   Widget _buildMessageItem(String label) {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center, 
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Stack(
-          clipBehavior: Clip.none, 
-          children: [
-            const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFFA0A0A0), size: 26), 
-            Positioned(
-              right: -4, top: -4, 
-              child: Container(
-                width: 18, height: 18, 
-                decoration: BoxDecoration(color: const Color(0xFFFF6D00), shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 1.5)), 
-                child: const Center(child: Text('5', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold, height: 1)))
-              )
-            ) 
-          ]
-        ), 
-        const SizedBox(height: 2), 
-        Text(label, style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFFA0A0A0), fontWeight: FontWeight.w500))
-      ]
+        Stack(clipBehavior: Clip.none, children: [
+          const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFFA0A0A0), size: 26),
+          Positioned(
+            right: -4, top: -4,
+            child: Container(
+              width: 18, height: 18,
+              decoration: BoxDecoration(color: const Color(0xFFFF6D00), shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 1.5)),
+              child: const Center(child: Text('5', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold, height: 1))),
+            ),
+          ),
+        ]),
+        const SizedBox(height: 2),
+        Text(label, style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFFA0A0A0), fontWeight: FontWeight.w500)),
+      ],
     );
   }
 }
