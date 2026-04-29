@@ -137,7 +137,16 @@ class _SignupScreenState extends State<SignupScreen> {
         ApiConstants.register,
         requestBody,
       );
-      final responseData = jsonDecode(response.body);
+
+      // ✅ FIX: Empty বা invalid JSON response হলে crash করবে না
+      Map<String, dynamic> responseData = {};
+      try {
+        if (response.body.isNotEmpty) {
+          responseData = jsonDecode(response.body);
+        }
+      } catch (_) {
+        // Server invalid JSON পাঠালে default empty map রাখা হবে
+      }
 
       if (response.statusCode == 201) {
         if (mounted) {
