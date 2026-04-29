@@ -1,27 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'splash_screen.dart'; // অ্যাপ এখন স্প্ল্যাশ স্ক্রিন থেকে শুরু হবে
+
+// 🚀 তোমার ফোল্ডার স্ট্রাকচার অনুযায়ী সব ইমপোর্ট
+import 'screens/intro/splash_screen.dart';
+import 'screens/auth/login_screen.dart';
+import 'screens/auth/signup_screen.dart';
+// import 'screens/intro/onboarding_screen.dart'; // যদি এই ফাইলটা থাকে তবে আনকমেন্ট করো
 
 void main() {
+  // নিশ্চিত করা হচ্ছে যে ফ্লাটার বাইন্ডিং প্রপারলি ইনিশিয়ালাইজ হয়েছে
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // স্ট্যাটাস বার ট্রান্সপারেন্ট এবং আইকন ডার্ক করার জন্য
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: Colors.white,
-      systemNavigationBarIconBrightness: Brightness.dark,
-    ),
-  );
-
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]).then((_) {
-    runApp(const KothaBookApp());
-  });
+  runApp(const KothaBookApp());
 }
 
 class KothaBookApp extends StatelessWidget {
@@ -31,27 +20,38 @@ class KothaBookApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'KothaBook',
-      debugShowCheckedModeBanner: false,
+      debugShowCheckedModeBanner: false, // 🚀 ডানপাশের DEBUG ব্যানারটি রিমুভ করা হলো
+      
+      // 🎨 অ্যাপের মেইন অরেঞ্জ থিম কনফিগারেশন
       theme: ThemeData(
         useMaterial3: true,
+        primaryColor: const Color(0xFFFF6D00),
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFFFF6D00),
           primary: const Color(0xFFFF6D00),
-          surface: Colors.white,
         ),
-        textTheme: GoogleFonts.poppinsTextTheme(
-          Theme.of(context).textTheme,
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF4F6F9),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          centerTitle: true,
-          iconTheme: IconThemeData(color: Color(0xFF1A1A1A)),
+        scaffoldBackgroundColor: Colors.white,
+        
+        // 🖋️ পুরো অ্যাপে Poppins ফন্ট সেট করা হলো
+        textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme),
+        
+        // ইনপুট বক্সের গ্লোবাল ডিজাইন
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: const Color(0xFFF8F9FA),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFFF6D00), width: 1.5),
+          ),
         ),
       ),
-      home: const SplashScreen(), // Initial Route
+
+      // 🚀 ম্যাজিক লাইন: এখানে SplashScreen দিয়েছি যাতে অ্যাপ শুরুতেই এটা লোড করে
+      home: const SplashScreen(),
     );
   }
 }

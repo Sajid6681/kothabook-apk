@@ -10,16 +10,28 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  http: ^1.6.0
+  
+  # 🚀 এপিআই কানেকশনের জন্য (ভার্সন ফিক্স করা হয়েছে)
+  http: ^1.2.1
+  
+  # 🎨 ডিজাইন ও ফন্ট
   google_fonts: ^8.0.2
   intl: ^0.19.0
   cupertino_icons: ^1.0.8
+  
+  # 🔥 ফায়ারবেস এবং এআই
   firebase_core: ^4.7.0
   firebase_ai: ^3.11.0
+  
+  # ⚙️ স্টেট ম্যানেজমেন্ট ও লোকাল স্টোরেজ
   provider: ^6.1.5+1
   shared_preferences: ^2.5.5
+  
+  # 📸 ছবি এবং মিডিয়া হ্যান্ডেলিং
   image_picker: ^1.2.1
   image_cropper: ^12.2.1
+  
+  # 🕒 সময় ও আইকন
   timeago: ^3.7.1
   phosphor_flutter: ^2.1.0
 
@@ -33,5 +45,3 @@ flutter:
   assets:
     - assets/verified_badge.png
     - assets/reactions/
-
-
