@@ -1,8 +1,7 @@
 class ApiConstants {
-  // ✅ Nginx reverse proxy দিয়ে যাবে — port লাগবে না
-  static const String baseUrl = "http://api.kothabook.com";
+  // পোর্ট এখন 8880
+  static const String baseUrl = "http://api.kothabook.com:8880"; 
 
-  // ─── Auth Endpoints ───
   static const String register = "$baseUrl/api/auth/register";
-  static const String login    = "$baseUrl/api/auth/login";
+  static const String login = "$baseUrl/api/auth/login";
 }
