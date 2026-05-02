@@ -1,0 +1,49 @@
+{
+  "app_name": "KothaBook",
+  "welcome_msg": "Welcome to KothaBook",
+  
+  "login_btn": "Login",
+  "email_hint": "Enter your email or phone",
+  "password_hint": "Enter your password",
+  "no_account": "Don't have an account?",
+  
+  "signup_btn": "Sign Up",
+  "first_name": "First Name",
+  "last_name": "Last Name",
+  "dob": "Date of Birth",
+  "gender": "Gender",
+  "male": "Male",
+  "female": "Female",
+  "other": "Other",
+  "confirm_password": "Confirm Password",
+  "already_have_account": "Already have an account?",
+  "create_account": "Create Account",
+  "terms_text": "By signing up, you agree to our Terms and Privacy Policy.",
+  
+  "setup_profile": "Setup Profile",
+  "step": "STEP",
+  "add_cover_photo": "Add Cover Photo",
+  "update_profile_msg": "Update your profile and cover photo",
+  
+  "location": "Location",
+  "current_city": "Current City",
+  "hometown": "Hometown",
+  
+  "education": "Education",
+  "school_uni": "School / University",
+  "major": "Major",
+  "year": "Year",
+  
+  "professional_details": "Professional Details",
+  "workplace": "Company / Workplace",
+  "job_title": "Job Title",
+  "website_optional": "Website (Optional)",
+  
+  "back": "BACK",
+  "next": "NEXT",
+  "save": "SAVE",
+  "lets_go": "LET'S GO",
+  
+  "congratulations": "Congratulations!",
+  "profile_setup_complete": "Your profile setup is complete. Welcome to the KothaBook community!"
+}
