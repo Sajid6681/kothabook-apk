@@ -1,16 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:easy_localization/easy_localization.dart'; // 🌍 Multi-language প্যাকেজ
 
-// 🚀 তোমার ফোল্ডার স্ট্রাকচার অনুযায়ী সব ইমপোর্ট
-import 'screens/intro/splash_screen.dart';
-import 'screens/auth/login_screen.dart';
-import 'screens/auth/signup_screen.dart';
-// import 'screens/intro/onboarding_screen.dart'; // যদি এই ফাইলটা থাকে তবে আনকমেন্ট করো
+// 🚀 Core Imports
+import 'core/theme/app_theme.dart';
 
-void main() {
-  // নিশ্চিত করা হচ্ছে যে ফ্লাটার বাইন্ডিং প্রপারলি ইনিশিয়ালাইজ হয়েছে
+// 🚀 Screens Imports
+// TODO: তোমার ফাইল অনুযায়ী নিচের লোকেশনগুলো ঠিক করে নিও
+import 'screens/home/home_screen.dart'; // হোম স্ক্রিন ইম্পোর্ট
+// import 'features/splash/splash_screen.dart'; 
+
+void main() async {
+  // ১. ফ্লাটার ইঞ্জিন স্টার্ট করা
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const KothaBookApp());
+  
+  // ২. Multi-language (লোকালাইজেশন) ইঞ্জিন স্টার্ট করা
+  await EasyLocalization.ensureInitialized();
+
+  runApp(
+    // ৩. অ্যাপকে ভাষার চাদরে মুড়িয়ে দেওয়া
+    EasyLocalization(
+      supportedLocales: const [Locale('en'), Locale('bn')], // ইংরেজি ও বাংলা
+      path: 'assets/translations', // 📁 যেখানে ভাষার JSON ফাইলগুলো থাকবে
+      fallbackLocale: const Locale('en'), // কোনো ভাষা খুঁজে না পেলে ডিফল্ট ইংরেজি
+      child: const KothaBookApp(),
+    ),
+  );
 }
 
 class KothaBookApp extends StatelessWidget {
@@ -22,36 +36,18 @@ class KothaBookApp extends StatelessWidget {
       title: 'KothaBook',
       debugShowCheckedModeBanner: false, // 🚀 ডানপাশের DEBUG ব্যানারটি রিমুভ করা হলো
       
-      // 🎨 অ্যাপের মেইন অরেঞ্জ থিম কনফিগারেশন
-      theme: ThemeData(
-        useMaterial3: true,
-        primaryColor: const Color(0xFFFF6D00),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFFF6D00),
-          primary: const Color(0xFFFF6D00),
-        ),
-        scaffoldBackgroundColor: Colors.white,
-        
-        // 🖋️ পুরো অ্যাপে Poppins ফন্ট সেট করা হলো
-        textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme),
-        
-        // ইনপুট বক্সের গ্লোবাল ডিজাইন
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: const Color(0xFFF8F9FA),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFFF6D00), width: 1.5),
-          ),
-        ),
-      ),
+      // 🌍 Multi-language কানেকশন
+      localizationsDelegates: context.localizationDelegates,
+      supportedLocales: context.supportedLocales,
+      locale: context.locale,
 
-      // 🚀 ম্যাজিক লাইন: এখানে SplashScreen দিয়েছি যাতে অ্যাপ শুরুতেই এটা লোড করে
-      home: const SplashScreen(),
+      // 🎨 স্মার্ট থিম ইঞ্জিন কানেকশন (ম্যাজিক!)
+      themeMode: ThemeMode.system, // ফোনের সেটিংস অনুযায়ী অটোমেটিক ডার্ক/লাইট মোড হবে!
+      theme: AppTheme.lightTheme, // লাইট মোডের ডিজাইন
+      darkTheme: AppTheme.darkTheme, // ডার্ক মোডের ডিজাইন
+      
+      // 🚀 প্রথম স্ক্রিন (এখানে তুমি চাইলে Splash Screen দিতে পারো)
+      home: const HomeScreen(), 
     );
   }
 }

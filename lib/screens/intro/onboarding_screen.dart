@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../auth/signup_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // 💾 ক্যাশ মেমোরির জন্য
+// import 'package:easy_localization/easy_localization.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/text_styles.dart';
+import '../widgets/custom_button.dart';
+// import '../auth/signup_screen.dart'; // সাইনআপ স্ক্রিন বানালে এটা আনকমেন্ট করবে
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -14,76 +17,100 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  // ৩টি স্টেপের ইংলিশ ডেটা
-  final List<Map<String, String>> _steps = [
+  final List<Map<String, String>> onboardingData = [
     {
-      'icon': '📸',
-      'title': 'Share Your Story',
-      'desc': 'Capture your moments and share them with your inner circle effortlessly.'
+      "title": "Welcome to KothaBook",
+      "desc": "Connect with friends, family and people who share your interests.",
+      "image": "assets/intro/onboard_1.png" 
     },
     {
-      'icon': '💬',
-      'title': 'Stay Connected',
-      'desc': 'Experience real-time chatting with high-end security and speed.'
+      "title": "Smart AI Feed",
+      "desc": "Experience a personalized feed powered by our advanced AI system.",
+      "image": "assets/intro/onboard_2.png" 
     },
     {
-      'icon': '🌍',
-      'title': 'Find Community',
-      'desc': 'Discover interesting people around you and build meaningful relations.'
+      "title": "Hyper-Local Marketplace",
+      "desc": "Buy and sell items perfectly matched to your current location.",
+      "image": "assets/intro/onboard_3.png" 
     },
   ];
 
-  void _finishOnboarding() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+  // 🧠 ক্যাশে সেভ করে সোজা সাইনআপে পাঠানোর ফাংশন
+  Future<void> _completeOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // 💾 ক্যাশে সেভ করে রাখলাম যে ইউজার অনবোর্ডিং দেখে ফেলেছে (False করে দিলাম)
     await prefs.setBool('isFirstTime', false);
     
-    if (!mounted) return;
-    Navigator.pushReplacement(
-      context, 
-      MaterialPageRoute(builder: (context) => const SignupScreen())
-    );
+    if (mounted) {
+      // ➡️ সোজা Signup স্ক্রিনে পাঠিয়ে দাও
+      // TODO: Signup স্ক্রিন বানালে নিচের লাইনটা আনকমেন্ট করে ঠিক করে নিও
+      /*
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const SignupScreen()),
+      );
+      */
+      print("➡️ Sending to Signup Screen...");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
-            // Skip Button
+            // ⏭️ Skip বাটন
             Align(
               alignment: Alignment.topRight,
               child: TextButton(
-                onPressed: _finishOnboarding,
-                child: Text('Skip', style: GoogleFonts.poppins(color: Colors.grey, fontWeight: FontWeight.bold)),
+                onPressed: _completeOnboarding, // স্কিপ করলে ক্যাশে সেভ হয়ে সাইনআপে যাবে
+                child: Text(
+                  "Skip",
+                  style: AppTextStyles.bodyText(AppColors.primaryOrange),
+                ),
               ),
             ),
             
-            // Slider
+            // 📱 পেজ স্লাইডার
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
-                onPageChanged: (idx) => setState(() => _currentPage = idx),
-                itemCount: _steps.length,
-                itemBuilder: (ctx, i) {
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentPage = index;
+                  });
+                },
+                itemCount: onboardingData.length,
+                itemBuilder: (context, index) {
                   return Padding(
-                    padding: const EdgeInsets.all(40),
+                    padding: const EdgeInsets.all(40.0),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(_steps[i]['icon']!, style: const TextStyle(fontSize: 100)),
+                        Image.asset(
+                          onboardingData[index]["image"]!,
+                          height: 300,
+                          fit: BoxFit.contain,
+                        ),
                         const SizedBox(height: 40),
                         Text(
-                          _steps[i]['title']!,
+                          onboardingData[index]["title"]!,
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.poppins(fontSize: 32, fontWeight: FontWeight.bold),
+                          style: AppTextStyles.heading1(
+                            isDarkMode ? AppColors.darkText : AppColors.lightText,
+                          ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 15),
                         Text(
-                          _steps[i]['desc']!,
+                          onboardingData[index]["desc"]!,
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.poppins(fontSize: 15, color: Colors.grey.shade500, height: 1.6),
+                          style: AppTextStyles.bodyText(
+                            isDarkMode ? AppColors.darkSubText : AppColors.lightSubText,
+                          ),
                         ),
                       ],
                     ),
@@ -92,46 +119,45 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
 
-            // Indicator and Button
+            // 🔵 ডট ইন্ডিকেটর
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                onboardingData.length,
+                (index) => AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  margin: const EdgeInsets.symmetric(horizontal: 5),
+                  height: 10,
+                  width: _currentPage == index ? 25 : 10,
+                  decoration: BoxDecoration(
+                    color: _currentPage == index
+                        ? AppColors.primaryOrange
+                        : Colors.grey.shade400,
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 40),
+
+            // 🔘 নেক্সট বা স্টার্ট বাটন
             Padding(
-              padding: const EdgeInsets.all(30),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(3, (i) => AnimatedContainer(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              child: CustomButton( 
+                text: _currentPage == onboardingData.length - 1
+                    ? "Get Started"
+                    : "Next",
+                onPressed: () {
+                  if (_currentPage == onboardingData.length - 1) {
+                    _completeOnboarding(); // শেষ পেজে আসলে ক্যাশে সেভ হয়ে সাইনআপে যাবে
+                  } else {
+                    _pageController.nextPage(
                       duration: const Duration(milliseconds: 300),
-                      margin: const EdgeInsets.only(right: 8),
-                      height: 8,
-                      width: _currentPage == i ? 24 : 8,
-                      decoration: BoxDecoration(
-                        color: _currentPage == i ? const Color(0xFFFF6D00) : Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    )),
-                  ),
-                  const SizedBox(height: 40),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (_currentPage == 2) {
-                        _finishOnboarding();
-                      } else {
-                        _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF6D00),
-                      minimumSize: const Size(double.infinity, 64),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      elevation: 8,
-                      shadowColor: const Color(0xFFFF6D00).withOpacity(0.3),
-                    ),
-                    child: Text(
-                      _currentPage == 2 ? 'GET STARTED' : 'NEXT STEP',
-                      style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1),
-                    ),
-                  ),
-                ],
+                      curve: Curves.easeIn,
+                    );
+                  }
+                },
               ),
             ),
           ],

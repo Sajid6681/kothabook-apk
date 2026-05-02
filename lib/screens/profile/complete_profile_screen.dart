@@ -2,8 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:image_cropper/image_cropper.dart';
-// import '../home/home_screen.dart'; // 🚀 হোম স্ক্রিন তৈরি হলে এটা আনকমেন্ট করবে
+
+// 🚀 ইমপোর্ট (কন্ট্রোলার এবং হোম স্ক্রিন)
+import '../../controllers/profile_controller.dart';
+import '../home/home_screen.dart';
 
 class CompleteProfileScreen extends StatefulWidget {
   final String generatedUsername;
@@ -23,409 +25,289 @@ class CompleteProfileScreen extends StatefulWidget {
 
 class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   final PageController _pageController = PageController();
-  int _currentPage = 0; 
+  int _currentPage = 0;
   bool _isSaving = false;
 
-  // 🚀 Image Variables
+  // 🧠 কন্ট্রোলার কানেকশন
+  final ProfileController _profileController = ProfileController();
+
+  // 📸 ইমেজের জন্য ভেরিয়েবল
   File? _profileImage;
   File? _coverImage;
   final ImagePicker _picker = ImagePicker();
 
-  // Controllers for Step 2 & 3
+  // 🗄️ UI কন্ট্রোলারসমূহ
   final _cityController = TextEditingController();
   final _hometownController = TextEditingController();
+  final _schoolController = TextEditingController();
+  final _majorController = TextEditingController();
+  final _classController = TextEditingController(); // 🎓 Class/Year
+  
   final _workPlaceController = TextEditingController();
   final _workTitleController = TextEditingController();
   final _workWebsiteController = TextEditingController();
-  final _schoolController = TextEditingController();
-  final _majorController = TextEditingController();
-  final _classController = TextEditingController();
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    _cityController.dispose();
-    _hometownController.dispose();
-    _workPlaceController.dispose();
-    _workTitleController.dispose();
-    _workWebsiteController.dispose();
-    _schoolController.dispose();
-    _majorController.dispose();
-    _classController.dispose();
-    super.dispose();
-  }
-
-  // ─── 📸 Image Picker & Cropper Logic ───────────────────────────────────────
-
-  // প্রোফাইল ছবি: Circle Crop
-  Future<void> _pickProfileImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
-    if (image != null) {
-      CroppedFile? croppedFile = await ImageCropper().cropImage(
-        sourcePath: image.path,
-        // ✅ FIX: cropStyle সরানো হয়েছে — এটা image_cropper v8+ এ নেই
-        // Circle crop এর জন্য uiSettings এ aspectRatio square করলেই হয়
-        uiSettings: [
-          AndroidUiSettings(
-            toolbarTitle: 'Crop Profile Photo',
-            toolbarColor: const Color(0xFFFF6D00),
-            toolbarWidgetColor: Colors.white,
-            initAspectRatio: CropAspectRatioPreset.square,
-            lockAspectRatio: true,
-            hideBottomControls: false,
-          ),
-          IOSUiSettings(title: 'Crop Profile Photo'),
-        ],
-      );
-      if (croppedFile != null) {
-        setState(() { _profileImage = File(croppedFile.path); });
-      }
+  // 📸 গ্যালারি থেকে ছবি সিলেক্ট
+  Future<void> _pickImage(bool isProfile) async {
+    final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        if (isProfile) {
+          _profileImage = File(pickedFile.path);
+        } else {
+          _coverImage = File(pickedFile.path);
+        }
+      });
     }
   }
 
-  // কভার ছবি: Rectangle (16:9) Drag to Position
-  Future<void> _pickCoverImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
-    if (image != null) {
-      CroppedFile? croppedFile = await ImageCropper().cropImage(
-        sourcePath: image.path,
-        // ✅ FIX: cropStyle সরানো হয়েছে (rectangle হলো default)
-        // ✅ FIX: aspectRatioPresets সরানো হয়েছে — এটা এখন uiSettings এর ভেতরে দিতে হয়
-        uiSettings: [
-          AndroidUiSettings(
-            toolbarTitle: 'Adjust Cover Photo',
-            toolbarColor: const Color(0xFFFF6D00),
-            toolbarWidgetColor: Colors.white,
-            initAspectRatio: CropAspectRatioPreset.ratio16x9,
-            lockAspectRatio: true, 
-            hideBottomControls: false,
-            // ✅ aspectRatioPresets এখন AndroidUiSettings এর ভেতরে
-            aspectRatioPresets: [CropAspectRatioPreset.ratio16x9],
-          ),
-          IOSUiSettings(
-            title: 'Adjust Cover Photo',
-            aspectRatioLockEnabled: true,
-            // ✅ aspectRatioPresets এখন IOSUiSettings এর ভেতরে
-            aspectRatioPresets: [CropAspectRatioPreset.ratio16x9],
-          ),
-        ],
-      );
-      if (croppedFile != null) {
-        setState(() { _coverImage = File(croppedFile.path); });
-      }
-    }
-  }
-
-  // ─── Step 1: Basic Info & Photos ──────────────────────────────────────────
-  Widget _buildStep1() {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-      children: [
-        // 🚀 Cover & Profile Photo Stack 
-        Padding(
-          padding: const EdgeInsets.only(top: 8.0, bottom: 40.0),
-          child: Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.bottomCenter,
-            children: [
-              // ─── Cover Photo ───
-              GestureDetector(
-                onTap: _pickCoverImage,
-                child: Container(
-                  height: 160,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFFF6D00), width: 1.5),
-                    image: _coverImage != null ? DecorationImage(image: FileImage(_coverImage!), fit: BoxFit.cover) : null,
-                  ),
-                  child: _coverImage == null ? Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.camera_alt, color: Color(0xFFFF6D00), size: 32),
-                      const SizedBox(height: 6),
-                      Text("ADD COVER PHOTO", style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFFF6D00), letterSpacing: 0.5)),
-                    ],
-                  ) : null,
-                ),
-              ),
-              
-              // ─── Profile Photo with floating + Icon ───
-              Positioned(
-                bottom: -50,
-                child: GestureDetector(
-                  onTap: _pickProfileImage,
-                  child: Stack(
-                    clipBehavior: Clip.none, 
-                    children: [
-                      // Main Profile Image Circle
-                      Container(
-                        width: 110,
-                        height: 110,
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8, spreadRadius: 1)],
-                        ),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.orange.shade50,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFFFF6D00), width: 1.5),
-                            image: _profileImage != null ? DecorationImage(image: FileImage(_profileImage!), fit: BoxFit.cover) : null,
-                          ),
-                          child: _profileImage == null ? const Icon(Icons.camera_alt, color: Color(0xFFFF6D00), size: 36) : null,
-                        ),
-                      ),
-                      
-                      // The '+' Icon 
-                      Positioned(
-                        bottom: 4,
-                        right: 4,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFF6D00),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                          child: const Icon(Icons.add, color: Colors.white, size: 16),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 30),
-
-        // Read-Only Display Names
-        Text("FULL NAME", style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade600, letterSpacing: 0.5)),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
-                child: Text(widget.firstName, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey.shade800)),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
-                child: Text(widget.lastName, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey.shade800)),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        
-        Text("USERNAME", style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade600, letterSpacing: 0.5)),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.orange.shade200)),
-          child: Row(
-            children: [
-              Text("@", style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.orange.shade300)),
-              const SizedBox(width: 4),
-              Text(widget.generatedUsername, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFFFF6D00))),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ─── Step 2 & 3 (UNTOUCHED) ───────────────────────────────────────────────
-  Widget _buildStep2() {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20), 
-      children: [
-        Text("Location Info", style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFFFF6D00))), 
-        const SizedBox(height: 16), 
-        _buildField("Current City", _cityController, hint: "e.g. Dhaka, Bangladesh"), 
-        _buildField("Hometown", _hometownController, hint: "e.g. Chittagong, Bangladesh"), 
-        const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Divider(color: Color(0xFFEEEEEE), thickness: 1)), 
-        Text("Education", style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFFFF6D00))), 
-        const SizedBox(height: 16), 
-        _buildField("School / University", _schoolController, hint: "e.g. Dhaka University"), 
-        Row(
-          children: [
-            Expanded(flex: 2, child: _buildField("Major / Degree", _majorController, hint: "e.g. CSE")), 
-            const SizedBox(width: 16), 
-            Expanded(flex: 1, child: _buildField("Class / Year", _classController, hint: "e.g. 2024"))
-          ]
-        )
-      ]
-    );
-  }
-
-  Widget _buildStep3() {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20), 
-      children: [
-        Text("Professional Details", style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFFFF6D00))), 
-        const SizedBox(height: 16), 
-        _buildField("Workplace / Company", _workPlaceController, hint: "e.g. Google"), 
-        _buildField("Job Title", _workTitleController, hint: "e.g. Software Engineer"), 
-        _buildField("Website (Optional)", _workWebsiteController, hint: "https://yourwebsite.com", keyboardType: TextInputType.url)
-      ]
-    );
-  }
-
-  Widget _buildField(String label, TextEditingController controller, {String hint = '', bool isEditable = true, TextInputType keyboardType = TextInputType.text}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16), 
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start, 
-        children: [
-          Text(label, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF1A1A1A))), 
-          const SizedBox(height: 8), 
-          TextField(
-            controller: controller, 
-            readOnly: !isEditable, 
-            keyboardType: keyboardType, 
-            style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: isEditable ? const Color(0xFF1A1A1A) : Colors.grey.shade600), 
-            decoration: InputDecoration(
-              hintText: hint, 
-              hintStyle: GoogleFonts.poppins(color: Colors.grey.shade400), 
-              filled: true, 
-              fillColor: isEditable ? const Color(0xFFF8F9FA) : Colors.grey.shade100, 
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14), 
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), 
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFFF6D00), width: 1.5))
-            )
-          )
-        ]
-      )
-    );
-  }
-
-  // ─── Navigation Logic ─────────────────────────────────────────────────────
-  void _nextPage() {
-    if (_currentPage < 2) {
-      _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-    } else {
-      _saveProfileData();
-    }
-  }
-
-  void _prevPage() {
-    if (_currentPage > 0) {
-      _pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-    }
-  }
-
-  Future<void> _saveProfileData() async {
+  // ─── 🚀 সেভ বাটনে ক্লিক করলে যা হবে ───
+  Future<void> _handleSaveProfile() async {
     setState(() => _isSaving = true);
-    // TODO: Upload images and data to Node.js / MySQL backend
-    await Future.delayed(const Duration(seconds: 2));
+
+    // 🧠 UI থেকে ডাটা নিয়ে Controller-এর কাছে পাঠানো হচ্ছে
+    bool isSuccess = await _profileController.uploadProfileData(
+      firstName: widget.firstName,
+      lastName: widget.lastName,
+      username: widget.generatedUsername,
+      city: _cityController.text.trim(),
+      hometown: _hometownController.text.trim(),
+      school: _schoolController.text.trim(),
+      major: _majorController.text.trim(),
+      classYear: _classController.text.trim(),
+      workPlace: _workPlaceController.text.trim(),
+      workTitle: _workTitleController.text.trim(),
+      workWebsite: _workWebsiteController.text.trim(),
+      profileImage: _profileImage,
+      coverImage: _coverImage,
+    );
+
     setState(() => _isSaving = false);
 
-    if (mounted) {
-      // 🚀 হোমস্ক্রিনে নেভিগেশন
-      // Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const HomeScreen()), (route) => false);
+    if (isSuccess) {
+      if (mounted) _showCongratulationsDialog(); // 🎉 সাকসেস পপআপ
+    } else {
+      _showSnackbar("Failed to save profile. Please try again.");
     }
+  }
+
+  // 🎉 CONGRATULATIONS POPUP (User Friendly)
+  void _showCongratulationsDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+        child: Container(
+          padding: const EdgeInsets.all(24.0),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(32)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.stars_rounded, color: Color(0xFFFF6D00), size: 70),
+              const SizedBox(height: 16),
+              Text("Congratulations!", style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87)),
+              const SizedBox(height: 12),
+              Text(
+                "Your profile setup is complete. Welcome to the KothaBook community!",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF6D00),
+                  minimumSize: const Size(double.infinity, 56),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 5,
+                  shadowColor: const Color(0xFFFF6D00).withValues(alpha: 0.4),
+                ),
+                child: Text("LET'S GO", style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showSnackbar(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  // 🎨 UI Input Decoration
+  InputDecoration _customInput(String hint, IconData icon) {
+    return InputDecoration(
+      hintText: hint,
+      prefixIcon: Icon(icon, color: Colors.grey.shade400, size: 20),
+      filled: true,
+      fillColor: const Color(0xFFF8F9FA),
+      contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFFF6D00), width: 1.5)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, 
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
+            // 🌟 Header
             Padding(
-              padding: const EdgeInsets.all(24.0), 
+              padding: const EdgeInsets.all(24),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start, 
                 children: [
-                  Text("Complete Profile", style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF1A1A1A))), 
-                  const SizedBox(height: 8), 
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween, 
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("Step ${_currentPage + 1} of 3", style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey.shade600, fontWeight: FontWeight.w500)), 
-                      Text(_currentPage == 0 ? "Basic Info" : _currentPage == 1 ? "Location & Edu" : "Professional", style: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFFFF6D00), fontWeight: FontWeight.w600))
-                    ]
-                  ), 
-                  const SizedBox(height: 16), 
-                  Row(
-                    children: List.generate(3, (index) => Expanded(
-                      child: Container(
-                        margin: EdgeInsets.only(right: index < 2 ? 8 : 0), 
-                        height: 6, 
-                        decoration: BoxDecoration(
-                          color: index <= _currentPage ? const Color(0xFFFF6D00) : Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(10)
-                        )
-                      )
-                    ))
-                  )
-                ]
-              )
-            ), 
+                      Text("Setup Profile", style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(20)),
+                        child: Text("STEP ${_currentPage + 1} / 3", style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFFF6D00))),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  LinearProgressIndicator(value: (_currentPage + 1) / 3, backgroundColor: Colors.grey[100], color: const Color(0xFFFF6D00), minHeight: 6),
+                ],
+              ),
+            ),
+            
             Expanded(
               child: PageView(
-                controller: _pageController, 
-                physics: const NeverScrollableScrollPhysics(), 
-                onPageChanged: (index) => setState(() => _currentPage = index), 
-                children: [_buildStep1(), _buildStep2(), _buildStep3()]
-              )
-            ), 
-            Container(
-              padding: const EdgeInsets.all(24), 
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  // ✅ FIX: withOpacity deprecated → Color.fromRGBO ব্যবহার করা হয়েছে
-                  BoxShadow(
-                    color: const Color.fromRGBO(0, 0, 0, 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, -5),
-                  )
-                ]
-              ), 
+                controller: _pageController,
+                physics: const NeverScrollableScrollPhysics(),
+                onPageChanged: (i) => setState(() => _currentPage = i),
+                children: [
+                  // ─── STEP 1: Photos Only ───
+                  SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        Stack(
+                          alignment: Alignment.bottomCenter,
+                          clipBehavior: Clip.none,
+                          children: [
+                            GestureDetector(
+                              onTap: () => _pickImage(false),
+                              child: Container(
+                                height: 160, width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8F9FA), 
+                                  borderRadius: BorderRadius.circular(20), 
+                                  border: Border.all(color: Colors.grey.shade200, width: 2),
+                                  image: _coverImage != null ? DecorationImage(image: FileImage(_coverImage!), fit: BoxFit.cover) : null
+                                ),
+                                child: _coverImage == null ? Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.camera_alt_outlined, size: 40, color: Colors.grey.shade300), const SizedBox(height: 8), Text("Add Cover Photo", style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey.shade400, fontWeight: FontWeight.bold))]) : null,
+                              ),
+                            ),
+                            Positioned(
+                              bottom: -45,
+                              child: GestureDetector(
+                                onTap: () => _pickImage(true),
+                                child: Container(
+                                  width: 100, height: 100,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white, shape: BoxShape.circle, 
+                                    border: Border.all(color: Colors.white, width: 4),
+                                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 10)],
+                                    image: _profileImage != null ? DecorationImage(image: FileImage(_profileImage!), fit: BoxFit.cover) : null
+                                  ),
+                                  child: _profileImage == null ? Icon(Icons.person_add_alt_1_outlined, size: 35, color: Colors.grey.shade300) : null,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 70),
+                        Text("Update your profile and cover photo", style: GoogleFonts.poppins(color: Colors.grey.shade500, fontSize: 13, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                  ),
+
+                  // ─── STEP 2: Location & Education ───
+                  SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Location", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16)),
+                        const SizedBox(height: 16),
+                        TextField(controller: _cityController, decoration: _customInput("Current City", Icons.location_on_outlined)),
+                        const SizedBox(height: 12),
+                        TextField(controller: _hometownController, decoration: _customInput("Hometown", Icons.home_outlined)),
+                        const SizedBox(height: 24),
+                        Text("Education", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16)),
+                        const SizedBox(height: 16),
+                        TextField(controller: _schoolController, decoration: _customInput("School / University", Icons.school_outlined)),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(flex: 2, child: TextField(controller: _majorController, decoration: _customInput("Major", Icons.stars_outlined))),
+                            const SizedBox(width: 10),
+                            Expanded(child: TextField(controller: _classController, decoration: InputDecoration(hintText: "Year", hintStyle: GoogleFonts.poppins(fontSize: 14, color: Colors.grey.shade400), filled: true, fillColor: const Color(0xFFF8F9FA), border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFFF6D00)))))),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ─── STEP 3: Work Info ───
+                  SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Professional Details", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16)),
+                        const SizedBox(height: 16),
+                        TextField(controller: _workPlaceController, decoration: _customInput("Company / Workplace", Icons.business_center_outlined)),
+                        const SizedBox(height: 12),
+                        TextField(controller: _workTitleController, decoration: _customInput("Job Title", Icons.badge_outlined)),
+                        const SizedBox(height: 12),
+                        TextField(controller: _workWebsiteController, decoration: _customInput("Website (Optional)", Icons.language_rounded)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 🌟 Footer
+            Padding(
+              padding: const EdgeInsets.all(24),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween, 
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   if (_currentPage > 0)
                     TextButton(
-                      onPressed: _prevPage,
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                        backgroundColor: Colors.grey.shade100,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
-                      ),
-                      child: Text("Back", style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey.shade700))
+                      onPressed: () => _pageController.previousPage(duration: const Duration(milliseconds: 200), curve: Curves.linear), 
+                      child: Text("BACK", style: GoogleFonts.poppins(color: Colors.grey.shade600, fontWeight: FontWeight.bold))
                     )
-                  else const SizedBox(width: 80), 
+                  else const SizedBox(width: 60),
                   ElevatedButton(
-                    onPressed: _isSaving ? null : _nextPage, 
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF6D00),
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 0
-                    ), 
-                    child: _isSaving 
-                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
-                      : Text(_currentPage == 2 ? "Save Profile" : "Next Step", style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white))
-                  )
-                ]
-              )
-            )
-          ]
-        )
-      )
+                    onPressed: _isSaving ? null : () {
+                      if (_currentPage < 2) {
+                        _pageController.nextPage(duration: const Duration(milliseconds: 200), curve: Curves.linear);
+                      } else {
+                        _handleSaveProfile(); // 🧠 Controller কে কল করা হচ্ছে
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF6D00), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 16), elevation: 0),
+                    child: _isSaving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : Text(_currentPage == 2 ? "SAVE" : "NEXT", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

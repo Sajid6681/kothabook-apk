@@ -1,8 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'onboarding_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart'; 
 import '../auth/login_screen.dart';
+import '../home/home_screen.dart';
+// import 'onboarding_screen.dart'; // অনবোর্ডিং থাকলে এটা আনকমেন্ট করবে
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -11,54 +12,34 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
+class _SplashScreenState extends State<SplashScreen> {
 
   @override
   void initState() {
     super.initState();
-    // 🎭 লোগোর জন্য অরিজিনাল পপ-আপ অ্যানিমেশন
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    );
-    _scaleAnimation = CurvedAnimation(parent: _controller, curve: Curves.elasticOut);
-    _controller.forward();
-
-    _checkAppFlow();
+    // ⏳ ৩ সেকেন্ড পর চেক করবে ইউজার লগইন করা আছে কিনা
+    Timer(const Duration(seconds: 3), _checkLoginStatus);
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  // 🧠 মাস্টারমাইন্ড রাউটিং লজিক
+  Future<void> _checkLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // 💾 ক্যাশ থেকে চেক করছে ইউজার লগইন করা কিনা
+    final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
 
-  // 🧠 সাজিদ বেবির সেই মাস্টারমাইন্ড লজিক:
-  _checkAppFlow() async {
-    await Future.delayed(const Duration(seconds: 3));
-
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    bool isFirstTime = prefs.getBool('isFirstTime') ?? true;
-    bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-
-    if (!mounted) return;
-
-    if (isLoggedIn) {
-      // সোজা হোম স্ক্রিনে যাবে
-    } else {
-      if (isFirstTime) {
-        // ১ম বার: Splash -> Onboarding (৩টি স্টেপ)
+    if (mounted) {
+      if (isLoggedIn) {
+        // ✅ যদি আগে থেকেই লগইন করা থাকে, সোজা Home Screen-এ যাও
         Navigator.pushReplacement(
-          context, 
-          MaterialPageRoute(builder: (context) => const OnboardingScreen())
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       } else {
-        // ২য় বার থেকে: Splash -> Login
+        // ❌ যদি লগইন করা না থাকে, Login Screen-এ যাও
         Navigator.pushReplacement(
-          context, 
-          MaterialPageRoute(builder: (context) => const LoginScreen())
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
         );
       }
     }
@@ -67,46 +48,17 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFF6D00), // KothaBook Signature Orange
+      backgroundColor: const Color(0xFFFF6D00), 
       body: Center(
-        child: ScaleTransition(
-          scale: _scaleAnimation,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(color: Colors.black26, blurRadius: 30, spreadRadius: 2)
-                  ]
-                ),
-                child: const Icon(Icons.chat_bubble_rounded, color: Color(0xFFFF6D00), size: 64),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'KothaBook',
-                style: GoogleFonts.poppins(
-                  fontSize: 42,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  letterSpacing: -1,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'CONNECT. SHARE. ENJOY.',
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white70,
-                  letterSpacing: 2,
-                ),
-              ),
-            ],
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              'assets/logo/logo.png', // 🖼️ তোমার লোগো
+              width: 150, 
+              height: 150,
+            ),
+          ],
         ),
       ),
     );

@@ -1,6 +1,6 @@
 name: myapp
 description: "A new Flutter project."
-publish_to: 'none' 
+publish_to: 'none'
 
 version: 1.0.0+1
 
@@ -10,28 +10,31 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  
-  # 🚀 এপিআই কানেকশনের জন্য (ভার্সন ফিক্স করা হয়েছে)
+
+  # 🚀 এপিআই কানেকশনের জন্য
   http: ^1.2.1
-  
+
   # 🎨 ডিজাইন ও ফন্ট
   google_fonts: ^8.0.2
-  intl: ^0.19.0
+  intl: ^0.20.2
   cupertino_icons: ^1.0.8
-  
+
+  # 🌍 লোকালাইজেশন
+  easy_localization: ^3.0.7
+
   # 🔥 ফায়ারবেস এবং এআই
   firebase_core: ^4.7.0
   firebase_ai: ^3.11.0
-  
+
   # ⚙️ স্টেট ম্যানেজমেন্ট ও লোকাল স্টোরেজ
   provider: ^6.1.5+1
   shared_preferences: ^2.5.5
-  
-  # 📸 ছবি এবং মিডিয়া হ্যান্ডেলিং
+
+  # 📸 ছবি এবং মিডিয়া হ্যান্ডেলিং
   image_picker: ^1.2.1
   image_cropper: ^12.2.1
-  
-  # 🕒 সময় ও আইকন
+
+  # 🕒 সময় ও আইকন
   timeago: ^3.7.1
   phosphor_flutter: ^2.1.0
 
@@ -43,5 +46,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/verified_badge.png
+    - assets/badge/verified_badge.png
     - assets/reactions/
+    - assets/logo/
+    - assets/intro/
